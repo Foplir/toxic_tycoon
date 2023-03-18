@@ -1,3 +1,4 @@
+import time
 import telebot
 from telebot import types
 
@@ -19,25 +20,25 @@ BUY_SUCCESFUL = "Улучшение успешно куплено!✅"
 NOT_ENOUGH_MONEY = "Нехватило средств❌"
 
 
-def create_btn(name):
-	btn = types.KeyboardButton(name)
+def create_btn(name, callback):
+	btn = types.InlineKeyboardButton(text=name, callback_data=callback)
 	return btn
 
 
-click = create_btn(CLICK)
-magazine = create_btn(MAGAZINE)
-back = create_btn(BACK)
-balance = create_btn(BALANCE_)
-upgrade_1 = create_btn(UPGRADE_1)
-upgrade_2 = create_btn(UPGRADE_2)
-upgrade_3 = create_btn(UPGRADE_3)
-upgrade_4 = create_btn(UPGRADE_4)
+click = create_btn(CLICK, CLICK)
+magazine = create_btn(MAGAZINE, MAGAZINE)
+back = create_btn(BACK, BACK)
+balance = create_btn(BALANCE_, BALANCE_)
+upgrade_1 = create_btn(UPGRADE_1, UPGRADE_1)
+upgrade_2 = create_btn(UPGRADE_2, UPGRADE_2)
+upgrade_3 = create_btn(UPGRADE_3, UPGRADE_3)
+upgrade_4 = create_btn(UPGRADE_4, UPGRADE_4)
 
 
-state_0 = types.ReplyKeyboardMarkup(resize_keyboard=True)
+state_0 = types.InlineKeyboardMarkup(row_width=4)
 state_0.add(click).add(magazine).add(balance)
 
-state_1 = types.ReplyKeyboardMarkup(resize_keyboard=True)
+state_1 = types.InlineKeyboardMarkup(row_width=4)
 state_1.add(upgrade_1).add(upgrade_2).add(upgrade_3).add(upgrade_4).add(back)
 
 
@@ -73,27 +74,49 @@ def click():
 	BALANCE = BALANCE+INCREMENT
 	return BALANCE
 
+def edit(txt, state):
+	global MAIN_MESSAGE
+	global MAIN_ID
+	bot.edit_message_text(chat_id=MAIN_MESSAGE, message_id=MAIN_ID.id, text=txt, reply_markup=state)
+
+
+def delete(message):
+	bot.delete_message(message.chat.id, message.message_id)
+
+
 @bot.message_handler(commands=['start'])
 def start_message(message):
-	bot.send_message(message.chat.id, "Toxic Tycoon", reply_markup=state_0)
+	global MAIN_MESSAGE
+	global MAIN_ID
+	MAIN_MESSAGE = message.chat.id
+	bot.send_message(message.chat.id, "Hi!")
+	MAIN_ID = bot.send_message(message.chat.id, "Toxic Tycoon", reply_markup=state_0)
+
+@bot.callback_query_handler(func=lambda call: True)
+def answer(call):
+	global BALANCE
+
+	if call.data == MAGAZINE:
+		edit(MAGAZINE, state_1)
+		bot.send_message(call.message.chat.id, '')
+
+	elif call.data == BACK:
+		edit("Toxic Tycoon", state_0)
+		bot.send_message(call.message.chat.id, '')
+
+	elif call.data == BALANCE_:
+		current_balance = "Ваш текущий баланс: "+str(BALANCE)+"$"
+		edit(current_balance, state_0)
+		bot.send_message(call.message.chat.id, '')
+		time.sleep(2)
+		edit("Toxic Tycoon", state_0)
+	elif call.data == CLICK:
+		click()
+		bot.send_message(call.message.chat.id, '')
 
 @bot.message_handler()
 def button_handler(message):
-	global BALANCE
-	global INCREMENT
-	if message.text==MAGAZINE:
-		bot.send_message(message.chat.id, "МАГАЗИН", reply_markup=state_1)
-		bot.delete_message(message.chat.id, message.message_id)
-	elif message.text==BACK:
-		bot.send_message(message.chat.id, "Назад..", reply_markup=state_0)
-		bot.delete_message(message.chat.id, message.message_id)
-	elif message.text==CLICK:
-		click()
-		bot.delete_message(message.chat.id, message.message_id)
-	elif message.text==BALANCE_:
-		bot.send_message(message.chat.id, "Ваш текущий баланс: "+str(BALANCE)+"$")
-		bot.delete_message(message.chat.id, message.message_id)
-	elif message.text==UPGRADE_1:
+	if message.text==UPGRADE_1:
 		bot.send_message(message.chat.id, buy_upgrade(1))
 		bot.delete_message(message.chat.id, message.message_id)
 	elif message.text==UPGRADE_2:
