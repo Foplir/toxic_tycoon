@@ -10,68 +10,62 @@ BALANCE_ = "баланс💲"
 CLICK = "оскорбить💢"
 MAGAZINE = "купить улучшения✔"
 BACK = "назад◀"
-UPGRADE_1 = "МАКАКА🐵 - 25$"
-UPGRADE_2 = "УРОД😎- 100$"
-UPGRADE_3 = "ЧУРКА НЕМЫТАЯ 😡- 500$"
-UPGRADE_4 = "БЕС ВСЕЛИЛСЯ🥶- 1000$"
+
+UPGRADES = ["МАКАКА🐵 - 25$", "УРОД😎- 100$", "ЧУРКА НЕМЫТАЯ 😡- 500$", "БЕС ВСЕЛИЛСЯ🥶- 1000$", "ПОН🤐- 5000$", "ЛОШАРА🤣- 10000$", "БАБУБЭ😱- 100000$"]
+COSTS = [25, 100, 500, 1000, 5000, 10000, 100000]
+INCREMENTS = [1, 5, 30, 80, 500, 1200, 15000]
+
 INCREMENT = 1
 BALANCE = 0
+
 BUY_SUCCESFUL = "Улучшение успешно куплено!✅"
 NOT_ENOUGH_MONEY = "Нехватило средств❌"
 
 
-def create_btn(name, callback):
-	btn = types.InlineKeyboardButton(text=name, callback_data=callback)
+def create_btn(name):
+	btn = types.InlineKeyboardButton(text=name, callback_data=name)
 	return btn
 
 
-click = create_btn(CLICK, CLICK)
-magazine = create_btn(MAGAZINE, MAGAZINE)
-back = create_btn(BACK, BACK)
-balance = create_btn(BALANCE_, BALANCE_)
-upgrade_1 = create_btn(UPGRADE_1, UPGRADE_1)
-upgrade_2 = create_btn(UPGRADE_2, UPGRADE_2)
-upgrade_3 = create_btn(UPGRADE_3, UPGRADE_3)
-upgrade_4 = create_btn(UPGRADE_4, UPGRADE_4)
-
+#buttons
+click = create_btn(CLICK)
+magazine = create_btn(MAGAZINE)
+back = create_btn(BACK)
+balance = create_btn(BALANCE_)
 
 state_0 = types.InlineKeyboardMarkup(row_width=4)
 state_0.add(click).add(magazine).add(balance)
 
 state_1 = types.InlineKeyboardMarkup(row_width=4)
-state_1.add(upgrade_1).add(upgrade_2).add(upgrade_3).add(upgrade_4).add(back)
+for i in range(len(UPGRADES)):
+	state_1.add(create_btn(UPGRADES[i]))
+state_1.add(back)
 
 
-def buy_upgrade(upgrade):
-	global BALANCE
-	global INCREMENT
-	global BUY_SUCCESFUL
 
-	if upgrade==1 and BALANCE>=25:
-		BALANCE=BALANCE-25
-		INCREMENT=INCREMENT+1
-		return BUY_SUCCESFUL
+def buy_upgrade(upgrade, message):
+	global BALANCE, INCREMENT
 
-	if upgrade==2 and BALANCE>=100:
-		BALANCE=BALANCE-100
-		INCREMENT=INCREMENT+5
-		return BUY_SUCCESFUL
+	if BALANCE>=COSTS[upgrade]:
+		BALANCE=BALANCE-COSTS[upgrade]
+		INCREMENT=INCREMENT+INCREMENTS[upgrade]
+		msg = bot.send_message(message.chat.id, BUY_SUCCESFUL)
+		time.sleep(2)
+		bot.delete_message(message.chat.id, msg.message_id)
 
-	if upgrade==3 and BALANCE>=500:
-		BALANCE=BALANCE-500
-		INCREMENT=INCREMENT+30
-		return BUY_SUCCESFUL
-
-	if upgrade==4 and BALANCE>=1000:
-		BALANCE=BALANCE-1000
-		INCREMENT=INCREMENT+80
-		return BUY_SUCCESFUL
-
-	return NOT_ENOUGH_MONEY
+	else:
+		msg = bot.send_message(message.chat.id, NOT_ENOUGH_MONEY)
+		time.sleep(2)
+		bot.delete_message(message.chat.id, msg.message_id)
 
 def click():
 	global BALANCE
 	BALANCE = BALANCE+INCREMENT
+
+	with open(str(USER_ID), "w") as f:
+		f.writelines(str(BALANCE)+"\n")
+		f.writelines(str(INCREMENT))
+
 	return BALANCE
 
 def edit(txt, state):
@@ -86,11 +80,26 @@ def delete(message):
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-	global MAIN_MESSAGE
-	global MAIN_ID
+	global BALANCE, INCREMENT, MAIN_MESSAGE, MAIN_ID, USER_ID
 	MAIN_MESSAGE = message.chat.id
 	bot.send_message(message.chat.id, "Hi!")
 	MAIN_ID = bot.send_message(message.chat.id, "Toxic Tycoon", reply_markup=state_0)
+	USER_ID = message.from_user.id
+
+	try:
+		with open(str(USER_ID), "r") as f:
+			BALANCE = f.readline()
+			INCREMENT = f.readline()
+			print(INCREMENT)
+			print(BALANCE)
+		f.close()
+	except:
+		with open(str(USER_ID), "w+") as f:
+			f.write(str(BALANCE))
+		f.close()
+
+	BALANCE = int(BALANCE)
+	INCREMENT = int(INCREMENT)
 
 @bot.callback_query_handler(func=lambda call: True)
 def answer(call):
@@ -98,35 +107,23 @@ def answer(call):
 
 	if call.data == MAGAZINE:
 		edit(MAGAZINE, state_1)
-		bot.send_message(call.message.chat.id, '')
 
 	elif call.data == BACK:
 		edit("Toxic Tycoon", state_0)
-		bot.send_message(call.message.chat.id, '')
 
 	elif call.data == BALANCE_:
 		current_balance = "Ваш текущий баланс: "+str(BALANCE)+"$"
-		edit(current_balance, state_0)
-		bot.send_message(call.message.chat.id, '')
-		time.sleep(2)
-		edit("Toxic Tycoon", state_0)
+		msg = bot.send_message(call.message.chat.id, current_balance)
+		time.sleep(1)
+		bot.delete_message(call.message.chat.id, msg.message_id)
+
 	elif call.data == CLICK:
 		click()
-		bot.send_message(call.message.chat.id, '')
 
-@bot.message_handler()
-def button_handler(message):
-	if message.text==UPGRADE_1:
-		bot.send_message(message.chat.id, buy_upgrade(1))
-		bot.delete_message(message.chat.id, message.message_id)
-	elif message.text==UPGRADE_2:
-		bot.delete_message(message.chat.id, message.message_id)
-		bot.send_message(message.chat.id, buy_upgrade(2))
-	elif message.text==UPGRADE_3:
-		bot.delete_message(message.chat.id, message.message_id)
-		bot.send_message(message.chat.id, buy_upgrade(3))
-	elif message.text==UPGRADE_4:
-		bot.delete_message(message.chat.id, message.message_id)
-		bot.send_message(message.chat.id, buy_upgrade(4))
+	for i in range(len(UPGRADES)):
+		if call.data == UPGRADES[i]:
+			buy_upgrade(i, call.message)
+
+
 bot.infinity_polling()
 
