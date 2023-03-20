@@ -1,3 +1,4 @@
+import pickle
 import time
 import telebot
 from telebot import types
@@ -21,6 +22,7 @@ BALANCE = 0
 BUY_SUCCESFUL = "Улучшение успешно куплено!✅"
 NOT_ENOUGH_MONEY = "Нехватило средств❌"
 
+PLAYER = {}
 
 def create_btn(name):
 	btn = types.InlineKeyboardButton(text=name, callback_data=name)
@@ -59,8 +61,9 @@ def buy_upgrade(upgrade, message):
 		bot.delete_message(message.chat.id, msg.message_id)
 
 def click():
-	global BALANCE
+	global BALANCE, PLAYER
 	BALANCE = BALANCE+INCREMENT
+
 
 	with open(str(USER_ID), "w") as f:
 		f.writelines(str(BALANCE)+"\n")
@@ -86,20 +89,6 @@ def start_message(message):
 	MAIN_ID = bot.send_message(message.chat.id, "Toxic Tycoon", reply_markup=state_0)
 	USER_ID = message.from_user.id
 
-	try:
-		with open(str(USER_ID), "r") as f:
-			BALANCE = f.readline()
-			INCREMENT = f.readline()
-			print(INCREMENT)
-			print(BALANCE)
-		f.close()
-	except:
-		with open(str(USER_ID), "w+") as f:
-			f.write(str(BALANCE))
-		f.close()
-
-	BALANCE = int(BALANCE)
-	INCREMENT = int(INCREMENT)
 
 @bot.callback_query_handler(func=lambda call: True)
 def answer(call):
